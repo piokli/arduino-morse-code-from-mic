@@ -1,14 +1,16 @@
 static const int MIC_PIN = A0;
+
+float bufor[20];
 float x = 0;
 float y = 0;
 float h = 0;
-float bufor[20];
-int n = 0;
-int avg = 0;
+
 double t_01;
 double t_10;
 double dt;
 
+int n = 0;
+int avg = 0;
 int discr = 0;
 int discrLast = 0;
 
@@ -22,9 +24,9 @@ void loop() {
   y = LowPassFilter(x, y, 0.7); // after LPF
   
   h = x-y;  // "after" HPF
-  h = 2 * sqrt(h*h); // 2 razy wartosc bezwzgledna
+  h = 2 * sqrt(h*h);
 
-  // Bufor w celu uśrednienia sygnału
+  // Moving average
   bufor[n] = h;
   n++;
   if (n >= 19) {
@@ -36,7 +38,7 @@ void loop() {
   }
   avg = avg / 20;
 
-  // Dyskretyzacja {1, 0}
+  // to {1, 0}
   if (avg > 50) {
     discr = 1; 
   } else {
