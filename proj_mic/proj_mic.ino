@@ -1,8 +1,8 @@
 /*
       Morse Code to English Alphabet
 
-      In a few words this sketch allows to interpret buzzer's "beeps" as morse code and
-      then translate them to english alphabet.
+      In a few words this sketch allows to interpret series of buzzer's "beeps" as morse code and
+      then translate them to idividual english alphabet letters (and numbers).
 
       The circuit:
       * components: buzzer, electrolyt microphone, button, 1k resistor
@@ -14,7 +14,7 @@
 /* PINs */
 static const int MIC_PIN = A0;
 
-/* Arrays and bufor for translating morse code */
+/* Arrays and a buffer for translating morse code */
 const char *englishAlphabet[] = {"A", "B", "C", "D", "E", "F", "G",
                                  "H", "I", "J", "K", "L", "M", "N",
                                  "O", "P", "Q", "R", "S", "T", "U",
@@ -32,7 +32,7 @@ const char *morseCode[] = {".-", "-...", "-.-.", "-..", ".", "..-.", "--.",
 char msg[32];
 
 /* Variables (vectors as for [n, n-1] means [currentProbe, lastProbe])
-   for getting data acquisition and filtering */
+   for getting data and filtering */
 const int n = 1;
 float inputFromMic[] = {0, 0};
 float filterOutput[] = {0, 0};
@@ -98,12 +98,6 @@ float highPassFilter(float x[], float y[], float dt, float fc) {
   float a = 1/(2*3.14*dt*fc + 1);
   return y[n] = a * (y[n-1] + x[n] - x[n-1]);
 }
-/* blablaaaa */
-
-
-float lowPassFilter(float x[], float y[], float a) {
-  return y[n] = y[n-1] + a * (x[n] - y[n-1]);
-}
 
 
 /* blabla... */
@@ -116,7 +110,7 @@ void discrToMorse(int d[2])
   if (d[n-1] != d[n]) {
     double dt;
     if (d[n-1] == 0 and d[n] == 1) {
-      // zmiana 0 -> 1
+      /* leading edge 0 -> 1 */
       t_01 = micros();
       dt = t_01 - t_10;
       if (dt > 1000000) {
@@ -127,7 +121,7 @@ void discrToMorse(int d[2])
         strcpy(msg, "");
       }
     } else if(d[n-1] == 1 and d[n] == 0) {
-      // zmiana 1 -> 0
+      /* trailing edge 1 -> 0 */
        t_10 = micros();
        dt = t_10 - t_01;
        if (dt > 200000 and dt < 1000000) {
@@ -141,7 +135,7 @@ void discrToMorse(int d[2])
   }
 }
 
-
+/* Fucnction... */
 void morseCodeToEnglishAlphabet(char m[]) {
   int alphabetLength = 37;
   for (int i = 0; i < alphabetLength - 1; i++) {
