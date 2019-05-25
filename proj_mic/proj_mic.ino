@@ -31,18 +31,16 @@ const char *morseCode[] = {".-", "-...", "-.-.", "-..", ".", "..-.", "--.",
                           };
 char msg[32];
 
-/* Variables (vectors as for [n, n-1] means [currentProbe, lastProbe])
-   for getting data and filtering */
+/* Variables for getting data and filtering */
 const int n = 1;
-float inputFromMic[] = {0, 0};
+float inputFromMic[] = {0, 0}; // {<current_probe>, <last_probe>}
 float filterOutput[] = {0, 0};
 float absoluteValue[] = {0, 0};
-int discr[] = {0, 0};
 float avg = 0;
-
-const int wielkoscBufora=20;
+const int wielkoscBufora = 20;
 float bufor[wielkoscBufora];
 int k = 0;
+int discr[] = {0, 0};
 
 /* Used for measuring beep's time length */
 double t_01;
