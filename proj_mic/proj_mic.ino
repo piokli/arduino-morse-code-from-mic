@@ -1,35 +1,19 @@
 /*
       Morse Code to English Alphabet
 
-      In a few words this sketch allows to interpret series of buzzer's "beeps" as morse code and
-      then translate them to idividual english alphabet letters (and numbers).
+      In a few words this sketch allows to interpret series of buzzer's "beeps"
+      as morse code and then translate them to idividual english 
+      alphabet letters (and numbers).
 
       The circuit:
       * components: buzzer, electrolyt microphone, button, 1k resistor
-      * circuit template will be attached as an .png file
+      * circuit template is attached as an .png file
       
       Last modified 25.05.2019
 */
 
 /* PINs */
 const int MIC_PIN = A0;
-
-/* Arrays and a buffer for translating morse code */
-const char *englishAlphabet[] = {"A", "B", "C", "D", "E", "F", "G",
-                                 "H", "I", "J", "K", "L", "M", "N",
-                                 "O", "P", "Q", "R", "S", "T", "U",
-                                 "V", "W", "X", "Y", "Z",
-                                 "1", "2", "3", "4", "5",
-                                 "6", "7", "8", "9", "0"
-                                };
-const char *morseCode[] = {".-", "-...", "-.-.", "-..", ".", "..-.", "--.",
-                           "....", "..", ".---.", "-.-", ".-..", "--", "-.",
-                           "---", ".--.", "--.-", ".-.", "...", "-", "..-",
-                           "..._", ".--", "-..-", "-.--", "--..",
-                           ".----", "..---", "...--", "....-", ".....",
-                           "-....", "--...", "---..", "----.", "-----"
-                          };
-char msg[32];
 
 /* Variables for getting data and filtering */
 const int n = 1;
@@ -85,56 +69,109 @@ void loop() {
 }
 
 
-/* High Pass Filter function gets ... - działanie filtru?? jak obliczony? */
+/* 
+  Acts like a discrete high pass filter.
+
+  Parameters:
+  'x' input
+  'y' output
+  'dt' time interval == average time between function uses
+  'fc' frequency cutoff
+  
+  Returns:
+  'y' filtering result 
+
+  'a' is calculated from 'dt' and 'fc'.
+  'dt' was measured and averaged and 'fc' was chosen
+  knowing that the buzzer can generate 4 kHz ± 500 Hz.
+  From measured 'dt' we know that overall sampling rate is around 6.5 GHz. 
+  */
 float highPassFilter(float x[], float y[], float dt, float fc) {
   float a = 1/(2*3.14*dt*fc + 1);
   return y[n] = a * (y[n-1] + x[n] - x[n-1]);
 }
 
 
-/* blabla... */
-/* przerwa miedzy literami > 1s
-   '-' od 200ms do 1s 
-   '.' od 50ms do 200ms*/
+/*
+  Converts binary signal to morse code.
+  
+  Parameters:
+  d discrete signal to analyze
+
+  Returns:
+  nothing
+
+  Function analyzes processed signal. Checks for dots and dashes.
+  If "beep" classifies as a dot or a dash a '.' or a '-' is written
+  to 'msg_buffer'.
+  When signal is down for over 1s the 'msg_buffer' is passed
+  to 'morseCodeToEnglishAlphabet()' function and the 'msg_buffer' is cleared.
+*/
 void discreteSignalToMorseCode(int d[2])
 {
-  /* variables for measuring beep's duration */
+  /* Constants defining dot and dash */
+  const int MIN_DOT_LENGTH = 50000;
+  const int MAX_DOT_LENGTH = 200000;
+  const int MAX_DASH_LENGTH = 1000000;
+  /* Variables for measuring beep's duration and a buffer*/
   static double t_01;
   static double t_10;
+  static double dt;
+  static char msg_buffer[32];
 
-  if (d[n-1] != d[n]) {                    //if signal has changed then:
-    double dt;
-    if (d[n-1] == 0 and d[n] == 1) {       //if leading edge (0 -> 1) then:
-      t_01 = micros();
-      dt = t_01 - t_10;
-      if (dt > 1000000) {
-        //Serial.println('|');
-        //Serial.print(msg);
-        morseCodeToEnglishAlphabet(msg);
-        Serial.println(msg);
-        strcpy(msg, "");
-      }
-    } else if(d[n-1] == 1 and d[n] == 0) {  //if trailing edge (1 -> 0) then:
-       t_10 = micros();
-       dt = t_10 - t_01;
-       if (dt > 200000 and dt < 1000000) {
-         //Serial.print('-');
-         strcat(msg, "-");
-       } else if (dt <= 200000 and dt > 50000) {
-         //Serial.print('.');
-         strcat(msg, ".");
-       }
+  if (d[n-1] == 0 and d[n] == 1) { //if leading edge (0 -> 1) then:
+    t_01 = micros();
+    dt = t_01 - t_10;
+    if (dt > MAX_BEEP_LENGTH) {
+      morseCodeToEnglishAlphabet(msg_buffer);
+      Serial.println(msg_buffer);
+      strcpy(msg_buffer, "");
     }
-  }
+  } else if(d[n-1] == 1 and d[n] == 0) { //if trailing edge (1 -> 0) then:
+      t_10 = micros();
+      dt = t_10 - t_01;
+      if (dt > MAX_DOT_LENGTH and dt < MAX_DASH_LENGTH) { //'-' when between 200ms-1s
+        strcat(msg_buffer, "-");
+      } else if (dt > MIN_DOT_LENGTH and dt <= MAX_DOT_LENGTH) { //'.' when between 50ms-200ms
+        strcat(msg_buffer, ".");
+      }
+    }
 }
 
 
-/* Fucnction... */
+/*
+  Translates series of dots and dashes to english alphabet and numbers.
+  
+  Parameters:
+  m buffer containing dots and dashes
+
+  Returns:
+  nothing
+
+  Function compares series of dots and dashes from 'm' to the ones from 'englishAlphabet' array.
+  When the same, a correct letter or number is then overwritten to 'm'. 
+*/
 void morseCodeToEnglishAlphabet(char m[]) {
+  /* Arrays for translating morse code */
+  const char *englishAlphabet[] = {"A", "B", "C", "D", "E", "F", "G",
+                                  "H", "I", "J", "K", "L", "M", "N",
+                                  "O", "P", "Q", "R", "S", "T", "U",
+                                  "V", "W", "X", "Y", "Z",
+                                  "1", "2", "3", "4", "5",
+                                  "6", "7", "8", "9", "0"
+                                  };
+  const char *morseCode[] = {".-", "-...", "-.-.", "-..", ".", "..-.", "--.",
+                            "....", "..", ".---.", "-.-", ".-..", "--", "-.",
+                            "---", ".--.", "--.-", ".-.", "...", "-", "..-",
+                            "..._", ".--", "-..-", "-.--", "--..",
+                            ".----", "..---", "...--", "....-", ".....",
+                            "-....", "--...", "---..", "----.", "-----"
+                            };
   const int ALPHABET_LENGTH = 37;
+
   for (int i = 0; i < ALPHABET_LENGTH - 1; i++) {
-    if (strcmp(morseCode[i], m) == 0) {
-      strcpy(m, englishAlphabet[i]);
+    if (strcmp(morseCode[i], m) == 0) {    //compares message to morse code
+      strcpy(m, englishAlphabet[i]);       //if found then translates
     }
   }
 }
