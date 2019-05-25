@@ -8,11 +8,11 @@
       * components: buzzer, electrolyt microphone, button, 1k resistor
       * circuit template will be attached as an .png file
       
-      Last modified 06.05.2019
+      Last modified 25.05.2019
 */
 
 /* PINs */
-static const int MIC_PIN = A0;
+const int MIC_PIN = A0;
 
 /* Arrays and a buffer for translating morse code */
 const char *englishAlphabet[] = {"A", "B", "C", "D", "E", "F", "G",
@@ -33,29 +33,21 @@ char msg[32];
 
 /* Variables for getting data and filtering */
 const int n = 1;
-float inputFromMic[] = {0, 0}; // {<current_probe>, <last_probe>}
+const int SIGN_BUFF_SIZE = 20;
+
+float inputFromMic[] = {0, 0}; // {<current_probe>, <last_probe>} == {n, n-1}
 float filterOutput[] = {0, 0};
 float absoluteValue[] = {0, 0};
+int discreteSignal[] = {0, 0};
 float avg = 0;
-const int wielkoscBufora = 20;
-float bufor[wielkoscBufora];
-int k = 0;
-int discr[] = {0, 0};
-
-/* Used for measuring beep's time length */
-double t_01;
-double t_10;
-
-
-
-/* M A I N */
-
+float signalBuffer[SIGN_BUFF_SIZE];
 
 
 void setup() {
   pinMode(MIC_PIN, INPUT);
   Serial.begin(115200);
 }
+
 
 void loop() {
   /* Acquiring data from microphone */
@@ -64,34 +56,36 @@ void loop() {
   /* Passing through high pass filter */
   filterOutput[n-1] = filterOutput[n];
   filterOutput[n] = highPassFilter(inputFromMic, filterOutput, 0.000145, 2000);
-  /* Getting absolute */
+  /* Getting absolute value of filtered signal */
   absoluteValue[n-1] = abs(filterOutput[n-1]);
   absoluteValue[n] = abs(filterOutput[n]);
-  /* Filling the bufor */
-  bufor[k] = absoluteValue[n];
+  
+  /* Averaging signal using a buffer */
+  static int k = 0;
+  signalBuffer[k] = absoluteValue[n];
   k++;
-  if (k >= wielkoscBufora) {
+  if (k >= SIGN_BUFF_SIZE) {
     k = 0;
   }
-  /* Averaging signal */
+
   avg = 0;
-  for (int i = 0; i < wielkoscBufora; i++) {
-    avg += bufor[i];
+  for (int i = 0; i < SIGN_BUFF_SIZE; i++) {
+    avg += signalBuffer[i];
   }
-  /* Filtered analog signal to discrete (0 and 1) */
-  discr[n-1] = discr[n];
+
+  /* Discretization of signal */
+  discreteSignal[n-1] = discreteSignal[n];
   if (avg > 800) {
-    discr[n] = 1;
+    discreteSignal[n] = 1;
   } else {
-    discr[n] = 0;
+    discreteSignal[n] = 0;
   }
   
-  discrToMorse(discr);
+  discreteSignalToMorseCode(discreteSignal);
 }
 
 
-
-/* High Pass Filter function gets ... */
+/* High Pass Filter function gets ... - działanie filtru?? jak obliczony? */
 float highPassFilter(float x[], float y[], float dt, float fc) {
   float a = 1/(2*3.14*dt*fc + 1);
   return y[n] = a * (y[n-1] + x[n] - x[n-1]);
@@ -102,13 +96,15 @@ float highPassFilter(float x[], float y[], float dt, float fc) {
 /* przerwa miedzy literami > 1s
    '-' od 200ms do 1s 
    '.' od 50ms do 200ms*/
-void discrToMorse(int d[2])
+void discreteSignalToMorseCode(int d[2])
 {
-  // najpierw wykrywamy zmianę z 0 na 1 i na odwrót
-  if (d[n-1] != d[n]) {
+  /* variables for measuring beep's duration */
+  static double t_01;
+  static double t_10;
+
+  if (d[n-1] != d[n]) {                    //if signal has changed then:
     double dt;
-    if (d[n-1] == 0 and d[n] == 1) {
-      /* leading edge 0 -> 1 */
+    if (d[n-1] == 0 and d[n] == 1) {       //if leading edge (0 -> 1) then:
       t_01 = micros();
       dt = t_01 - t_10;
       if (dt > 1000000) {
@@ -118,8 +114,7 @@ void discrToMorse(int d[2])
         Serial.println(msg);
         strcpy(msg, "");
       }
-    } else if(d[n-1] == 1 and d[n] == 0) {
-      /* trailing edge 1 -> 0 */
+    } else if(d[n-1] == 1 and d[n] == 0) {  //if trailing edge (1 -> 0) then:
        t_10 = micros();
        dt = t_10 - t_01;
        if (dt > 200000 and dt < 1000000) {
@@ -133,10 +128,11 @@ void discrToMorse(int d[2])
   }
 }
 
+
 /* Fucnction... */
 void morseCodeToEnglishAlphabet(char m[]) {
-  int alphabetLength = 37;
-  for (int i = 0; i < alphabetLength - 1; i++) {
+  const int ALPHABET_LENGTH = 37;
+  for (int i = 0; i < ALPHABET_LENGTH - 1; i++) {
     if (strcmp(morseCode[i], m) == 0) {
       strcpy(m, englishAlphabet[i]);
     }
