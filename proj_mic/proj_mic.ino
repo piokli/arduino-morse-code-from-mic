@@ -132,8 +132,8 @@ void discreteSignalToMorseCode(int d[2])
       dt = t_10 - t_01;
       if (dt > MAX_DOT_LENGTH and dt < MAX_DASH_LENGTH) { //'-' when between 200ms-1s
         strcat(msg_buffer, "-");
-      } else if (dt > MIN_DOT_LENGTH and dt <= MAX_DOT_LENGTH) { //'.' when between 50ms-200ms
-        strcat(msg_buffer, ".");
+      } else if (dt > MIN_DOT_LENGTH and dt <= MAX_DOT_LENGTH) { //'.' when between
+        strcat(msg_buffer, ".");                                 // 50ms-200ms
       }
     }
 }
@@ -148,7 +148,8 @@ void discreteSignalToMorseCode(int d[2])
   Returns:
   nothing
 
-  Function compares series of dots and dashes from 'm' to the ones from 'englishAlphabet' array.
+  Function compares series of dots and dashes from 'm' to the ones
+  from 'englishAlphabet' array.
   When the same, a correct letter or number is then overwritten to 'm'. 
 */
 void morseCodeToEnglishAlphabet(char m[]) {
